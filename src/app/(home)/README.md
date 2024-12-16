@@ -278,3 +278,112 @@ src/app/(home)/
 - [ ] 添加登录/注册入口
 - [ ] 编写组件测试
 - [ ] 优化页面性能
+
+## 用户认证系统设计
+
+### 1. 认证流程
+
+#### 登录流程
+- 支持邮箱/密码登录
+- 登录状态维持 (JWT + Cookie)
+- 会话状态同步
+- 安全退出处理
+
+#### 注册流程
+- 邮箱注册
+- 密码强度验证
+- 邮箱验证(可选)
+- 用户协议确认
+
+### 2. 数据模型
+
+#### User 模型
+```prisma
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String    // 加密存储
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+}
+```
+
+#### Session 模型
+```prisma
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  expires      DateTime
+  sessionToken String   @unique
+  accessToken  String   @unique
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+```
+
+### 3. 组件设计
+
+#### AuthButtons 组件
+- 未登录状态:
+  * 登录按钮
+  * 注册按钮
+  * 打开对应模态框
+- 已登录状态:
+  * 显示用户头像
+  * 显示用户名
+  * 下拉菜单(个人中心、退出等)
+- 响应式设计:
+  * 移动端精简显示
+  * 桌面端完整显示
+
+#### 登录模态框
+- 邮箱输入
+- 密码输入
+- 记住登录选项
+- 忘记密码链接
+- 第三方登录入口(预留)
+- 切换到注册
+
+#### 注册模态框
+- 邮箱输入
+- 密码输入
+- 确认密码
+- 用户协议确认
+- 验证码输入(可选)
+- 切换到登录
+
+### 4. API 设计
+
+#### 认证接口
+- POST /api/auth/register - 用户注册
+- POST /api/auth/login - 用户登录
+- POST /api/auth/logout - 用户退出
+- GET /api/auth/session - 获取会话状态
+
+#### 用户接口
+- GET /api/user/profile - 获取用户信息
+- PUT /api/user/profile - 更新用户信息
+- PUT /api/user/password - 修改密码
+
+### 5. 安全措施
+
+#### 密码安全
+- bcrypt 加密存储
+- 密码强度要求
+- 登录尝试限制
+
+#### 会话安全
+- JWT 令牌加密
+- Cookie 安全配置
+- CSRF 防护
+- XSS 防护
+
+#### 数据安全
+- 输入验证
+- 敏感数据加密
+- 日志脱敏
